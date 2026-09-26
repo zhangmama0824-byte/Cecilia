@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f7f4">
+  <title>TAILS · 宠物性格观察</title>
+  <style>
+    :root {
+      --canvas: #f4f5f3;
+      --surface: #ffffff;
+      --ink: #171c19;
+      --muted: #747b77;
+      --line: #e1e6e2;
+      --graphite: #26322d;
+      --sage: #5d7668;
+      --sage-soft: #eaf0ec;
+      --coral: #d98260;
+      --blue: #8197b5;
+      --dog-soft: #f1e1d4;
+      --cat-soft: #e1e8f2;
+      --shadow: 0 26px 70px rgba(27, 38, 32, .09);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); min-height: 100vh; }
+    button, input { font: inherit; color: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+    .page { max-width: 1280px; margin: auto; padding: 0 42px; }
+    header { height: 82px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 11px; font-size: 15px; font-weight: 760; letter-spacing: 1.4px; }
+    .brand-mark { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; color: white; background: var(--graphite); box-shadow: 0 5px 12px rgba(28, 39, 33, .15); }
+    .brand-mark svg { width: 17px; height: 17px; }
+    .nav { display: flex; gap: 27px; align-items: center; color: var(--muted); font-size: 12px; }
+    .nav span:first-child { color: var(--ink); }
+    .lang { padding: 8px 11px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: rgba(255,255,255,.65); }
+    main { min-height: calc(100vh - 82px); display: grid; grid-template-columns: minmax(390px, .94fr) minmax(500px, 1.06fr); align-items: center; gap: 54px; padding: 42px 0 64px; }
+    .visual { min-height: 635px; position: relative; display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(255,255,255,.9); border-radius: 24px; background: #edf1ee; padding: 25px; box-shadow: var(--shadow); transition: background .35s ease; }
+    .visual.cat-mode { background: #edf0f5; }
+    .visual-grid { position: absolute; inset: 19px; border: 1px solid rgba(255,255,255,.76); border-radius: 18px; pointer-events: none; }
+    .visual-grid::before, .visual-grid::after { content: ""; position: absolute; background: rgba(255,255,255,.5); }
+    .visual-grid::before { width: 1px; height: 100%; left: 50%; top: 0; }
+    .visual-grid::after { height: 1px; width: 100%; left: 0; top: 50%; }
+    .visual-topline { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; color: #68766e; font-size: 10px; letter-spacing: 1.4px; text-transform: uppercase; }
+    .live-dot { display: inline-flex; align-items: center; gap: 6px; letter-spacing: .4px; text-transform: none; }
+    .live-dot i { width: 6px; height: 6px; border-radius: 50%; background: var(--coral); box-shadow: 0 0 0 4px rgba(217,130,96,.14); }
+    .glass-stage { position: relative; z-index: 1; width: min(100%, 440px); height: 430px; margin: 27px auto 0; border: 1px solid rgba(255,255,255,.83); border-radius: 27px; background: rgba(255,255,255,.43); box-shadow: inset 0 1px 0 rgba(255,255,255,.78), 0 16px 38px rgba(69, 88, 76, .06); }
+    .stage-ring { position: absolute; width: 290px; height: 290px; border: 1px solid rgba(255,255,255,.86); border-radius: 50%; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+    .stage-ring::before { content: ""; position: absolute; inset: 22px; border: 1px dashed rgba(117, 139, 125, .25); border-radius: 50%; }
+    .paw-stamp { position: absolute; width: 180px; height: 180px; left: 50%; top: 52%; transform: translate(-50%, -50%); opacity: .88; transition: opacity .3s ease, transform .3s ease; }
+    .dog-paw-stamp { color: #dca47f; }
+    .cat-paw-stamp { display: none; color: #9baac0; }
+    .visual.cat-mode .dog-paw-stamp { display: none; }
+    .visual.cat-mode .cat-paw-stamp { display: block; }
+    .pet-wrap { position: absolute; z-index: 3; width: min(78%, 285px); left: 50%; top: 52%; transform: translate(-50%, -50%); animation: float 4.5s ease-in-out infinite; transform-origin: 50% 92%; }
+    .pet-svg { display: block; width: 100%; height: auto; overflow: visible; }
+    .pet-cat { display: none; }
+    .visual.cat-mode .pet-dog { display: none; }
+    .visual.cat-mode .pet-cat { display: block; }
+    .pet-svg .line { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+    .pet-dog { color: #4f4139; }
+    .pet-cat { color: #485668; }
+    .tail { transform-box: fill-box; transform-origin: 20% 80%; animation: wag .8s ease-in-out infinite alternate; }
+    .cat-tail { transform-box: fill-box; transform-origin: 12% 88%; animation: catTail 1.7s ease-in-out infinite alternate; }
+    .dog-tongue { transform-box: fill-box; transform-origin: 50% 0%; animation: tongue 2.5s ease-in-out infinite; }
+    .pet-shadow { position: absolute; z-index: 2; width: 145px; height: 15px; left: 50%; top: 84%; transform: translateX(-50%); border-radius: 50%; background: rgba(64, 79, 69, .14); filter: blur(7px); animation: shadow 4.5s ease-in-out infinite; }
+    .meme-bubble { position: absolute; z-index: 5; right: 9%; top: 13%; max-width: 145px; padding: 9px 12px; border: 1px solid rgba(255,255,255,.85); border-radius: 13px 13px 4px 13px; background: rgba(255,255,255,.74); color: #5d6d65; box-shadow: 0 9px 18px rgba(53, 69, 59, .07); font-size: 11px; line-height: 1.45; transform: rotate(3deg); }
+    .visual.cat-mode .meme-bubble { color: #61718a; transform: rotate(-3deg); }
+    .pet-caption { position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: end; gap: 18px; margin: 24px 9px 0; color: #65746b; font-size: 12px; }
+    .caption-name { color: var(--ink); font-size: 18px; font-weight: 680; margin-bottom: 5px; }
+    .caption-copy { display: block; line-height: 1.5; }
+    .caption-paw { width: 34px; height: 34px; color: var(--coral); flex: 0 0 auto; }
+    .visual.cat-mode .caption-paw { color: var(--blue); }
+    .visual-footnote { position: relative; z-index: 2; display: flex; justify-content: space-between; gap: 15px; margin: auto 9px 3px; padding-top: 19px; border-top: 1px solid rgba(255,255,255,.68); color: #7b8780; font-size: 10px; line-height: 1.5; }
+    .visual-footnote strong { color: #5c6d63; font-weight: 650; }
+    .content { max-width: 600px; width: 100%; padding: 43px 44px 36px; background: rgba(255,255,255,.92); border: 1px solid rgba(225,230,226,.96); border-radius: 22px; box-shadow: var(--shadow); }
+    .eyebrow { display: flex; align-items: center; gap: 10px; color: var(--sage); text-transform: uppercase; letter-spacing: 1.8px; font-size: 10px; font-weight: 750; margin-bottom: 21px; }
+    .eyebrow::before { content: ""; width: 24px; height: 1px; background: var(--sage); }
+    h1 { font-family: "Noto Serif SC", "Songti SC", serif; font-weight: 600; letter-spacing: 0; font-size: 45px; line-height: 1.3; margin: 0 0 15px; }
+    .intro { font-size: 14px; color: var(--muted); line-height: 1.9; max-width: 490px; margin: 0 0 28px; }
+    .meta { display: flex; gap: 20px; color: #78847c; font-size: 11px; margin-bottom: 28px; }
+    .meta span { display: flex; gap: 7px; align-items: center; }
+    .meta svg { width: 15px; height: 15px; color: var(--sage); }
+    .rule { height: 1px; background: var(--line); margin-bottom: 25px; }
+    .form-label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 11px; }
+    .name-row { display: flex; height: 52px; margin-bottom: 21px; }
+    .name-row input { flex: 1; width: 100px; border: 1px solid var(--line); border-right: 0; border-radius: 11px 0 0 11px; background: var(--surface); padding: 0 15px; outline: none; font-size: 14px; }
+    .name-row input:focus { border-color: #a9bbb0; box-shadow: inset 0 0 0 1px #a9bbb0; }
+    .name-row input::placeholder { color: #a3aaa4; }
+    .name-row .suffix { background: #fff; border: 1px solid var(--line); border-left: 0; border-radius: 0 11px 11px 0; display: grid; place-items: center; padding: 0 15px 0 4px; color: var(--muted); font-size: 12px; }
+    .species { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-bottom: 25px; }
+    .species button { min-height: 73px; border: 1px solid var(--line); background: white; text-align: left; padding: 0 15px; border-radius: 13px; display: flex; align-items: center; gap: 11px; cursor: pointer; transition: border-color .2s, background .2s, transform .2s, box-shadow .2s; }
+    .species button:hover { transform: translateY(-2px); box-shadow: 0 9px 20px rgba(35,55,42,.07); border-color: #a9b9ac; }
+    .species button.active { border-color: var(--sage); background: var(--sage-soft); box-shadow: inset 0 0 0 1px var(--sage), 0 9px 20px rgba(35,55,42,.06); }
+    .species-paw { width: 31px; height: 31px; flex: 0 0 auto; }
+    .species-paw.dog { color: var(--coral); }
+    .species-paw.cat { color: var(--blue); }
+    .species .option-copy { font-size: 13px; font-weight: 680; }
+    .species small { display: block; color: var(--muted); font-weight: 400; font-size: 10px; margin-top: 3px; }
+    .primary { width: 100%; height: 54px; display: flex; justify-content: space-between; align-items: center; padding: 0 19px; border: 0; border-radius: 12px; background: var(--graphite); color: white; cursor: pointer; font-weight: 650; font-size: 13px; transition: background .2s, transform .2s, box-shadow .2s; }
+    .primary:hover { background: #33443b; transform: translateY(-1px); box-shadow: 0 9px 20px rgba(31, 45, 37, .15); }
+    .primary svg { width: 18px; height: 18px; }
+    .fineprint { text-align: center; font-size: 10px; color: #929b94; margin: 13px 0 0; }
+    .footerline { display: flex; justify-content: space-between; margin-top: 25px; font-size: 10px; color: #929b94; }
+    .footerline b { color: #61736a; font-weight: 550; }
+    .quiz-shell { display: none; }
+    .quiz-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .back { border: 0; padding: 8px 0; background: transparent; color: var(--muted); display: flex; align-items: center; gap: 7px; cursor: pointer; font-size: 12px; }
+    .back svg { width: 16px; height: 16px; }
+    .step-label { font-size: 12px; color: var(--muted); }
+    .step-label strong { color: var(--sage); font-weight: 750; }
+    .progress { height: 4px; background: #e7ece8; margin-bottom: 34px; overflow: hidden; border-radius: 5px; }
+    .progress i { display: block; height: 100%; width: 1.667%; background: var(--sage); transition: width .35s ease; border-radius: inherit; }
+    .question-kicker { color: var(--sage); font-size: 10px; font-weight: 700; letter-spacing: .8px; margin: 0 0 12px; }
+    .question-title { font-family: "Noto Serif SC", "Songti SC", serif; font-size: 29px; line-height: 1.55; letter-spacing: 0; margin: 0 0 11px; font-weight: 600; }
+    .question-context { color: var(--muted); font-size: 13px; line-height: 1.8; min-height: 47px; margin: 0 0 23px; }
+    .answers { display: grid; gap: 10px; }
+    .answer { border: 1px solid var(--line); border-radius: 13px; background: white; text-align: left; min-height: 70px; padding: 13px 15px; display: grid; grid-template-columns: 33px 1fr 18px; align-items: center; gap: 12px; cursor: pointer; transition: .18s ease; }
+    .answer:hover { border-color: #a9b9ac; transform: translateX(2px); }
+    .answer.selected { background: var(--sage-soft); border-color: var(--sage); }
+    .answer-key { height: 31px; width: 31px; border-radius: 10px; background: #f0f2ef; color: #647168; display: grid; place-items: center; font-size: 12px; }
+    .answer.selected .answer-key { background: var(--sage); color: white; }
+    .answer-text { font-size: 13px; line-height: 1.7; color: #354139; }
+    .answer-check { width: 17px; height: 17px; border: 1px solid #d8dfd9; border-radius: 50%; }
+    .answer.selected .answer-check { border: 5px solid var(--sage); }
+    .quiz-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; color: #99a19a; font-size: 10px; }
+    .quiz-bottom .primary { width: 150px; height: 46px; font-size: 12px; }
+    .quiz-bottom .primary:disabled { background: #d9e0da; color: #f8faf8; cursor: not-allowed; transform: none; box-shadow: none; }
+    .result { display: none; }
+    .result-mark { display: inline-flex; align-items: center; gap: 7px; color: var(--sage); font-size: 11px; margin-bottom: 17px; }
+    .type-row { display: flex; align-items: end; gap: 15px; margin-bottom: 9px; }
+    .type-code { font-family: Georgia, serif; font-size: 56px; color: var(--sage); line-height: 1; letter-spacing: 1px; }
+    .type-name { font-size: 19px; padding-bottom: 5px; font-weight: 650; }
+    .result-lead { font-family: "Noto Serif SC", "Songti SC", serif; font-size: 21px; line-height: 1.6; margin: 0 0 18px; }
+    .result-body { color: var(--muted); line-height: 1.85; font-size: 13px; margin-bottom: 23px; }
+    .trait-title { font-size: 12px; font-weight: 700; margin-bottom: 13px; }
+    .traits { display: grid; gap: 12px; margin-bottom: 24px; }
+    .trait { display: grid; grid-template-columns: 90px 1fr 40px; gap: 10px; align-items: center; font-size: 11px; color: var(--muted); }
+    .trait-bar { height: 5px; background: #e6ebe6; position: relative; overflow: hidden; border-radius: 5px; }
+    .trait-bar i { display: block; height: 100%; width: 50%; background: var(--coral); border-radius: inherit; }
+    .trait-value { text-align: right; color: var(--ink); }
+    .care-note { background: var(--sage-soft); border-left: 2px solid var(--sage); padding: 13px 15px; margin-bottom: 20px; }
+    .care-note strong { display: block; font-size: 12px; margin-bottom: 5px; }
+    .care-note p { margin: 0; color: #6d796f; font-size: 12px; line-height: 1.75; }
+    .result-actions { display: flex; gap: 10px; }
+    .result-actions .primary { flex: 1; }
+    .secondary { height: 54px; border: 1px solid var(--line); border-radius: 12px; padding: 0 15px; background: white; cursor: pointer; font-size: 12px; }
+    .toast { position: fixed; left: 50%; bottom: 25px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; background: var(--graphite); color: white; padding: 12px 17px; border-radius: 9px; font-size: 12px; transition: .25s; }
+    .toast.show { transform: translate(-50%, 0); opacity: 1; }
+    @keyframes float { 0%,100% { transform: translate(-50%, -50%) translateY(0) rotate(0deg); } 50% { transform: translate(-50%, -50%) translateY(-8px) rotate(.7deg); } }
+    @keyframes wag { from { transform: rotate(-11deg); } to { transform: rotate(13deg); } }
+    @keyframes catTail { from { transform: rotate(-8deg); } to { transform: rotate(10deg); } }
+    @keyframes tongue { 0%, 58%, 100% { transform: translateY(0) scaleY(.72); } 68%, 85% { transform: translateY(2px) scaleY(1); } }
+    @keyframes blink { 0%,46%,50%,100% { transform: scaleY(1); } 48% { transform: scaleY(.08); } }
+    @keyframes shadow { 0%,100% { transform: translateX(-50%) scaleX(1); opacity: .8; } 50% { transform: translateX(-50%) scaleX(.86); opacity: .52; } }
+    @media (max-width: 980px) {
+      .page { padding: 0 28px; }
+      main { grid-template-columns: minmax(320px, .86fr) minmax(410px, 1.14fr); gap: 34px; }
+      .visual { min-height: 590px; padding: 23px; }
+      .content { padding-left: 34px; padding-right: 34px; }
+      h1 { font-size: 39px; }
+    }
+    @media (max-width: 700px) {
+      .page { padding: 0 16px; }
+      header { height: 68px; }
+      .nav { gap: 10px; font-size: 10px; }
+      .nav span:nth-child(-n+2) { display: none; }
+      main { min-height: auto; display: flex; flex-direction: column; gap: 18px; padding: 20px 0 34px; align-items: stretch; }
+      .visual { min-height: 360px; height: 360px; padding: 19px; border-radius: 20px; }
+      .visual-grid { inset: 13px; border-radius: 15px; }
+      .visual-topline { font-size: 8px; }
+      .glass-stage { width: min(100%, 330px); height: 245px; margin-top: 19px; border-radius: 20px; }
+      .stage-ring { width: 184px; height: 184px; }
+      .stage-ring::before { inset: 14px; }
+      .paw-stamp { width: 116px; height: 116px; top: 53%; }
+      .pet-wrap { width: 175px; top: 53%; }
+      .pet-shadow { width: 105px; height: 11px; top: 85%; }
+      .meme-bubble { right: 6%; top: 10%; max-width: 110px; padding: 7px 9px; font-size: 9px; }
+      .pet-caption { margin: 19px 5px 0; font-size: 10px; }
+      .caption-name { font-size: 15px; margin-bottom: 3px; }
+      .caption-paw { width: 28px; height: 28px; }
+      .visual-footnote { margin-left: 5px; margin-right: 5px; padding-top: 12px; font-size: 9px; }
+      .content { padding: 28px 21px 24px; max-width: none; border-radius: 18px; }
+      .eyebrow { margin-bottom: 14px; font-size: 9px; }
+      h1 { font-size: 33px; margin-bottom: 9px; }
+      .intro { margin-bottom: 18px; font-size: 13px; line-height: 1.8; }
+      .meta { margin-bottom: 20px; gap: 12px; font-size: 10px; }
+      .rule { margin-bottom: 19px; }
+      .species button { min-height: 68px; padding: 0 12px; }
+      .species-paw { width: 28px; height: 28px; }
+      .footerline { margin-top: 19px; }
+      .question-title { font-size: 24px; }
+      .progress { margin-bottom: 25px; }
+      .question-context { min-height: 0; margin-bottom: 17px; }
+      .answer { min-height: 66px; grid-template-columns: 30px 1fr 16px; gap: 10px; padding: 11px; }
+      .answer-key { width: 29px; height: 29px; }
+      .result-lead { font-size: 19px; }
+      .type-code { font-size: 48px; }
+      .quiz-bottom { gap: 12px; align-items: end; }
+      .quiz-bottom .primary { width: 132px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="brand"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 13c0-4 3.1-7 8-7s8 3 8 7-3.1 6-8 6-8-2-8-6Z" stroke="currentColor" stroke-width="1.8"/><path d="M8 11h.01M16 11h.01M9 15c1.7 1.5 4.3 1.5 6 0" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>TAILS</div>
+      <nav class="nav" aria-label="主导航"><span>性格测评</span><span>关于方法</span><span>宠物观察手记</span><span class="lang">中文⌄</span></nav>
+    </header>
+    <main>
+      <section class="visual" id="petVisual" aria-label="动态狗狗插画">
+        <div class="visual-grid" aria-hidden="true"></div>
+        <div class="visual-topline"><span>行为观察 · 01</span><span class="live-dot"><i></i>LIVE PORTRAIT</span></div>
+        <div class="glass-stage">
+          <div class="stage-ring" aria-hidden="true"></div>
+          <svg class="paw-stamp dog-paw-stamp" viewBox="0 0 200 200" aria-hidden="true"><path d="M101 176c-31 0-55-9-55-30 0-17 15-28 29-37 8-5 10-14 12-26 2-13 8-22 16-22s14 9 16 22c2 12 4 21 12 26 14 9 29 20 29 37 0 21-24 30-55 30Z" fill="currentColor" opacity=".18"/><ellipse cx="55" cy="77" rx="18" ry="25" transform="rotate(-30 55 77)" fill="currentColor"/><ellipse cx="94" cy="45" rx="18" ry="27" transform="rotate(-8 94 45)" fill="currentColor"/><ellipse cx="136" cy="45" rx="18" ry="27" transform="rotate(8 136 45)" fill="currentColor"/><ellipse cx="175" cy="77" rx="18" ry="25" transform="rotate(30 175 77)" fill="currentColor"/></svg>
+          <svg class="paw-stamp cat-paw-stamp" viewBox="0 0 200 200" aria-hidden="true"><path d="M101 176c-31 0-55-9-55-30 0-17 15-28 29-37 8-5 10-14 12-26 2-13 8-22 16-22s14 9 16 22c2 12 4 21 12 26 14 9 29 20 29 37 0 21-24 30-55 30Z" fill="currentColor" opacity=".18"/><ellipse cx="55" cy="77" rx="15" ry="25" transform="rotate(-27 55 77)" fill="currentColor"/><ellipse cx="94" cy="45" rx="15" ry="27" transform="rotate(-8 94 45)" fill="currentColor"/><ellipse cx="136" cy="45" rx="15" ry="27" transform="rotate(8 136 45)" fill="currentColor"/><ellipse cx="175" cy="77" rx="15" ry="25" transform="rotate(27 175 77)" fill="currentColor"/></svg>
+          <div class="meme-bubble" id="memeBubble">今天也要认真闻闻每一件事。</div>
+          <div class="pet-wrap" id="petWrap">
+          <svg class="pet-svg pet-dog" viewBox="0 0 420 430" role="img" aria-label="正在吐舌头的萌系小狗">
+            <ellipse cx="210" cy="398" rx="105" ry="13" fill="#829786" opacity=".16"/>
+            <g class="tail"><path d="M294 304 C340 276 375 292 368 327 C363 350 333 356 307 338" fill="none" stroke="#c87954" stroke-width="25" stroke-linecap="round"/><path d="M300 305 C334 291 357 301 356 319" fill="none" stroke="#f1bb91" stroke-width="8" stroke-linecap="round" opacity=".88"/></g>
+            <path d="M124 300 C126 266 157 249 210 249s84 17 86 51c3 42 0 82-17 96-15 12-43 16-69 16s-54-4-69-16c-17-14-20-54-17-96Z" fill="#d78b61"/>
+            <path d="M160 315c14-14 34-19 50-12 7 3 11 10 13 17 2-7 6-14 13-17 16-7 36-2 50 12-2 33-13 55-30 64-17 9-49 9-66 0-17-9-28-31-30-64Z" fill="#fff0dc"/>
+            <path d="M132 155 C108 132 76 140 57 168 C42 191 47 236 61 267 C70 287 91 301 110 284 C126 270 133 236 132 204Z" fill="#c77955"/>
+            <path d="M288 155 C312 132 344 140 363 168 C378 191 373 236 359 267 C350 287 329 301 310 284 C294 270 287 236 288 204Z" fill="#c77955"/>
+            <path d="M121 178 C111 160 93 157 79 174 C67 190 69 225 78 248 C84 263 96 270 108 258 C119 246 124 215 121 178Z" fill="#edb09a" opacity=".82"/>
+            <path d="M299 178 C309 160 327 157 341 174 C353 190 351 225 342 248 C336 263 324 270 312 258 C301 246 296 215 299 178Z" fill="#edb09a" opacity=".82"/>
+            <path d="M88 195 C88 126 136 88 210 88s122 38 122 107c0 75-45 126-122 126S88 270 88 195Z" fill="#dc956b"/>
+            <path d="M115 238 C132 286 168 308 210 308s78-22 95-70c-20 28-50 43-95 43s-75-15-95-43Z" fill="#fff0dc"/>
+            <ellipse cx="157" cy="193" rx="28" ry="36" fill="#1d2225" class="blink"/><ellipse cx="263" cy="193" rx="28" ry="36" fill="#1d2225" class="blink"/>
+            <ellipse cx="149" cy="181" rx="8" ry="10" fill="#fff" opacity=".94"/><circle cx="169" cy="211" r="4" fill="#fff" opacity=".72"/><ellipse cx="255" cy="181" rx="8" ry="10" fill="#fff" opacity=".94"/><circle cx="275" cy="211" r="4" fill="#fff" opacity=".72"/>
+            <ellipse cx="143" cy="239" rx="14" ry="7" fill="#ef9d8f" opacity=".42"/><ellipse cx="277" cy="239" rx="14" ry="7" fill="#ef9d8f" opacity=".42"/>
+            <ellipse cx="210" cy="245" rx="22" ry="16" fill="#3b3030"/>
+            <path d="M210 258v12m0 0c-9 8-19 8-28 1m28-1c9 8 19 8 28 1" fill="none" stroke="#704a43" stroke-width="3" stroke-linecap="round"/>
+            <path d="M190 268 C191 263 229 263 230 268 L228 289 C227 301 193 301 192 289Z" fill="#ed8f97" class="dog-tongue"/><path d="M210 272v18" fill="none" stroke="#f8b6bc" stroke-width="2.4" stroke-linecap="round" opacity=".82"/>
+            <path d="M136 226c-15 2-26 7-35 14m183-14c15 2 26 7 35 14" fill="none" stroke="#e9aa87" stroke-width="3" stroke-linecap="round" opacity=".72"/>
+            <path d="M174 385v15m72-15v15" stroke="#bd704f" stroke-width="5" stroke-linecap="round"/>
+          </svg>
+          <svg class="pet-svg pet-cat" viewBox="0 0 420 430" role="img" aria-label="正在轻轻摇尾巴的萌系猫咪">
+            <ellipse cx="210" cy="398" rx="104" ry="13" fill="#788aa1" opacity=".15"/>
+            <g class="cat-tail"><path d="M295 327 C349 342 376 310 365 276 C356 248 324 249 316 273 C312 286 320 298 334 296" fill="none" stroke="#c39f7d" stroke-width="25" stroke-linecap="round"/><path d="M298 327 C339 337 358 314 354 290" fill="none" stroke="#edd4b3" stroke-width="8" stroke-linecap="round" opacity=".85"/></g>
+            <path d="M127 302 C131 269 159 250 210 250s79 19 83 52c4 41-2 81-18 94-15 12-42 16-65 16s-50-4-65-16c-16-13-22-53-18-94Z" fill="#cba982"/>
+            <path d="M159 315c15-13 34-18 51-10 7 3 11 9 13 16 2-7 6-13 13-16 17-8 36-3 51 10-2 34-12 55-29 64-17 9-53 9-70 0-17-9-27-30-29-64Z" fill="#f5ead8"/>
+            <path d="M122 148 C111 123 113 93 126 72 C133 61 146 68 160 86 L185 116 C158 121 137 132 122 148Z" fill="#bc9976" stroke="#ad896a" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M298 148 C309 123 307 93 294 72 C287 61 274 68 260 86 L235 116 C262 121 283 132 298 148Z" fill="#bc9976" stroke="#ad896a" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M132 126 C127 105 130 89 137 80 C142 74 149 81 158 94 L174 112 C156 114 142 119 132 126Z" fill="#e4a9a4" opacity=".9"/><path d="M288 126 C293 105 290 89 283 80 C278 74 271 81 262 94 L246 112 C264 114 278 119 288 126Z" fill="#e4a9a4" opacity=".9"/>
+            <path d="M90 195 C90 128 138 91 210 91s120 37 120 104c0 74-45 123-120 123S90 269 90 195Z" fill="#d5b48d"/>
+            <path d="M115 235 C133 282 169 304 210 304s77-22 95-69c-21 26-50 40-95 40s-74-14-95-40Z" fill="#f7ecda"/>
+            <ellipse cx="157" cy="191" rx="27" ry="35" fill="#1f2427" class="blink"/><ellipse cx="263" cy="191" rx="27" ry="35" fill="#1f2427" class="blink"/>
+            <ellipse cx="149" cy="179" rx="8" ry="10" fill="#fff" opacity=".94"/><circle cx="169" cy="208" r="4" fill="#fff" opacity=".72"/><ellipse cx="255" cy="179" rx="8" ry="10" fill="#fff" opacity=".94"/><circle cx="275" cy="208" r="4" fill="#fff" opacity=".72"/>
+            <ellipse cx="144" cy="237" rx="13" ry="6" fill="#e4a2a4" opacity=".38"/><ellipse cx="276" cy="237" rx="13" ry="6" fill="#e4a2a4" opacity=".38"/>
+            <path d="M199 236 C204 230 216 230 221 236 C219 244 201 244 199 236Z" fill="#a56772"/>
+            <path d="M210 243v11m0 0c-8 7-16 7-23 2m23-2c8 7 16 7 23 2" fill="none" stroke="#805967" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M184 243 139 234m47 17-49 5m99-13 45-9m-46 17 49 5" fill="none" stroke="#9f806c" stroke-width="2.3" stroke-linecap="round" opacity=".7"/>
+            <path d="M161 385v15m98-15v15" stroke="#a88564" stroke-width="5" stroke-linecap="round"/>
+          </svg>
+          </div>
+          <div class="pet-shadow"></div>
+        </div>
+        <div class="pet-caption"><div><div class="caption-name" id="petName">豆包的观察日记</div><span class="caption-copy" id="petHint">它在用自己的方式认识世界。</span></div><svg class="caption-paw" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8.5 10.8c-2.2 1.5-4.3 3.4-4.3 5.7 0 2.3 2.7 3.3 7.8 3.3s7.8-1 7.8-3.3c0-2.3-2.1-4.2-4.3-5.7-1-.7-1.2-2.1-1.4-3.6-.3-2.3-1.2-3.7-2.1-3.7s-1.8 1.4-2.1 3.7c-.2 1.5-.4 2.9-1.4 3.6Z" fill="currentColor" opacity=".16"/><ellipse cx="6.4" cy="6.3" rx="1.6" ry="2.5" transform="rotate(-27 6.4 6.3)" fill="currentColor"/><ellipse cx="10.1" cy="4.2" rx="1.6" ry="2.5" transform="rotate(-7 10.1 4.2)" fill="currentColor"/><ellipse cx="13.9" cy="4.2" rx="1.6" ry="2.5" transform="rotate(7 13.9 4.2)" fill="currentColor"/><ellipse cx="17.6" cy="6.3" rx="1.6" ry="2.5" transform="rotate(27 17.6 6.3)" fill="currentColor"/></svg></div>
+        <div class="visual-footnote"><span><strong>小提示</strong><br>选择下面的爪印，开始记录它的日常线索。</span><span>TAILS / 2026</span></div>
+      </section>
+
+      <section class="content">
+        <div class="intro-shell" id="introShell">
+          <div class="eyebrow">宠物性格观察计划 · NO. 01</div>
+          <h1>听懂它，<br>从看见它开始。</h1>
+          <p class="intro">每个小小的选择，都是性格留下的线索。用 60 个日常情境，发现你的毛孩子如何感受、探索与回应这个世界。</p>
+          <div class="meta"><span><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>约 8–10 分钟</span><span><svg viewBox="0 0 24 24" fill="none"><path d="M12 21s8-4.4 8-11V5l-8-3-8 3v5c0 6.6 8 11 8 11Z" stroke="currentColor" stroke-width="1.6"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>无对错之分</span></div>
+          <div class="rule"></div>
+          <label class="form-label" for="petInput">先认识一下你的伙伴</label>
+          <div class="name-row"><input id="petInput" type="text" maxlength="12" value="豆包" placeholder="它的名字" aria-label="宠物名字"><span class="suffix">的小性格</span></div>
+          <span class="form-label">它是一位</span>
+          <div class="species" role="group" aria-label="选择宠物种类">
+            <button type="button" class="active" data-species="狗狗"><svg class="species-paw dog" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8.5 10.8c-2.2 1.5-4.3 3.4-4.3 5.7 0 2.3 2.7 3.3 7.8 3.3s7.8-1 7.8-3.3c0-2.3-2.1-4.2-4.3-5.7-1-.7-1.2-2.1-1.4-3.6-.3-2.3-1.2-3.7-2.1-3.7s-1.8 1.4-2.1 3.7c-.2 1.5-.4 2.9-1.4 3.6Z" fill="currentColor" opacity=".16"/><ellipse cx="6.4" cy="6.3" rx="1.6" ry="2.5" transform="rotate(-27 6.4 6.3)" fill="currentColor"/><ellipse cx="10.1" cy="4.2" rx="1.6" ry="2.5" transform="rotate(-7 10.1 4.2)" fill="currentColor"/><ellipse cx="13.9" cy="4.2" rx="1.6" ry="2.5" transform="rotate(7 13.9 4.2)" fill="currentColor"/><ellipse cx="17.6" cy="6.3" rx="1.6" ry="2.5" transform="rotate(27 17.6 6.3)" fill="currentColor"/></svg><span class="option-copy">狗狗<small>忠诚的小伙伴</small></span></button>
+            <button type="button" data-species="猫咪"><svg class="species-paw cat" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8.5 10.8c-2.2 1.5-4.3 3.4-4.3 5.7 0 2.3 2.7 3.3 7.8 3.3s7.8-1 7.8-3.3c0-2.3-2.1-4.2-4.3-5.7-1-.7-1.2-2.1-1.4-3.6-.3-2.3-1.2-3.7-2.1-3.7s-1.8 1.4-2.1 3.7c-.2 1.5-.4 2.9-1.4 3.6Z" fill="currentColor" opacity=".16"/><ellipse cx="6.4" cy="6.3" rx="1.4" ry="2.5" transform="rotate(-27 6.4 6.3)" fill="currentColor"/><ellipse cx="10.1" cy="4.2" rx="1.4" ry="2.5" transform="rotate(-7 10.1 4.2)" fill="currentColor"/><ellipse cx="13.9" cy="4.2" rx="1.4" ry="2.5" transform="rotate(7 13.9 4.2)" fill="currentColor"/><ellipse cx="17.6" cy="6.3" rx="1.4" ry="2.5" transform="rotate(27 17.6 6.3)" fill="currentColor"/></svg><span class="option-copy">猫咪<small>独立的观察家</small></span></button>
+          </div>
+          <button class="primary" id="startBtn" type="button"><span>开始观察</span><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14m-6-7 7 7-7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <p class="fineprint">结果仅作行为观察参考，每只宠物都有独一无二的个性。</p>
+          <div class="footerline"><span>TAILS <b>·</b> 懂它多一点</span><span>基于日常行为观察设计</span></div>
+        </div>
+
+        <div class="quiz-shell" id="quizShell">
+          <div class="quiz-top"><button class="back" id="backBtn" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M19 12H5m7 7-7-7 7-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>返回</button><div class="step-label">观察记录 <strong id="stepNum">01</strong><span> / <b id="totalSteps">60</b></span></div></div>
+          <div class="progress"><i id="progressBar"></i></div>
+          <div id="questionArea"></div>
+          <div class="quiz-bottom"><span>以最近一个月的日常表现为准</span><button class="primary" id="nextBtn" type="button" disabled><span>下一题</span><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14m-6-7 7 7-7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+        </div>
+
+        <div class="result" id="resultShell"></div>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+    // 60 questions: 15 observations for each MBTI axis. `pole` records which answer
+    // maps to the first letter, so answer position never becomes a scoring shortcut.
+    const questions = [
+      {axis:0,pole:0,title:'陌生人靠近时，它通常会……',context:'最近一个月在家中或户外遇到不熟悉的人。',a:'主动靠近或发起互动。',b:'先待在原处观察，熟悉后再靠近。'},
+      {axis:1,pole:0,title:'第一次接触新玩具时，它通常先……',context:'观察它把注意力放在哪里。',a:'闻、碰、咬或拨弄玩具的材质和声音。',b:'先在周围走一圈，再尝试把它放进已有的游戏。'},
+      {axis:2,pole:0,title:'你情绪低落时，它更常……',context:'以最近一个月它对你状态变化的回应为准。',a:'叼来玩具或发起熟悉的活动。',b:'安静地靠近或待在身边。'},
+      {axis:3,pole:0,title:'临时改变散步或进食时间时，它会……',context:'偶尔出现的时间变化最能看出适应方式。',a:'等待原来的安排重新出现。',b:'较快跟着新的时间继续。'},
+      {axis:0,pole:0,title:'遇见熟悉的朋友或访客时，它会……',context:'看互动前后精力变化，不评价亲疏。',a:'主动迎上去，互动后仍想继续。',b:'待在熟悉的人身边，互动一阵便休息。'},
+      {axis:1,pole:0,title:'学习新指令时，它更依赖……',context:'留意它通过哪类线索理解你的提示。',a:'重复、清晰的步骤和即时反馈。',b:'你的动作、语气和当下情境。'},
+      {axis:2,pole:0,title:'家里发生小意外时，它会先……',context:'例如水洒了、物品掉地上或有人撞到它。',a:'靠近现场，确认事情的经过。',b:'观察家人的状态，再决定是否靠近。'},
+      {axis:3,pole:0,title:'开始熟悉活动前，它通常……',context:'例如出门、吃饭或准备玩耍。',a:'等待熟悉的顺序逐步发生。',b:'会接受临时换个顺序或玩法。'},
+      {axis:0,pole:0,title:'玩耍结束后，它通常……',context:'观察热闹互动之后它如何恢复精力。',a:'还会叼来玩具或主动邀请。',b:'找个舒服的位置自己休息。'},
+      {axis:1,pole:0,title:'散步时它最容易注意到……',context:'比较它对眼前线索和整体变化的关注。',a:'正在发生的气味、声音或具体动作。',b:'路线整体的变化和前方可能出现的动静。'},
+      {axis:2,pole:0,title:'家里来了新成员时，它更可能……',context:'观察它如何处理自己的需要和对方的状态。',a:'先确认自己的空间和日常有没有变化。',b:'先观察对方，再慢慢找到相处方式。'},
+      {axis:3,pole:0,title:'在家里它更常选择……',context:'以它最自然、最放松的日常状态为准。',a:'熟悉的角落、物品和固定节奏。',b:'在不同位置和活动之间自由切换。'},
+      {axis:0,pole:1,title:'不熟悉的动物靠近时，它会……',context:'在安全距离内观察它与同类或其他动物的互动。',a:'先保持距离，看对方下一步动作。',b:'主动靠近，尝试建立互动。'},
+      {axis:1,pole:1,title:'换一条散步路线时，它更常……',context:'注意它如何记住和探索新的路线。',a:'沿着当下的气味和地标逐步确认。',b:'先探索路线整体，再尝试新的方向。'},
+      {axis:2,pole:1,title:'训练受挫时，它更可能……',context:'例如连续几次没有得到想要的结果。',a:'寻找安抚或暂时靠近你。',b:'换一种动作或路径继续尝试。'},
+      {axis:3,pole:1,title:'熟悉的玩具被收起来时，它会……',context:'观察它面对物品位置变化的反应。',a:'转去做别的事，之后再回来看看。',b:'继续寻找并完成这件事。'},
+      {axis:0,pole:1,title:'空闲下来时，它更常……',context:'比较它在没有人主动互动时的选择。',a:'自己闻闻、看看或找地方休息。',b:'走到人身边寻求陪伴或游戏。'},
+      {axis:1,pole:1,title:'同一个指令换到新场景时，它会……',context:'例如从家里换到户外或朋友家。',a:'需要重新确认具体动作和步骤。',b:'把原来的规则带到新场景里。'},
+      {axis:2,pole:1,title:'出现陌生声音时，它通常先……',context:'如门外声响、物品碰撞或远处的叫声。',a:'看照顾者的反应，再决定行动。',b:'先定位声音来源或寻找具体原因。'},
+      {axis:3,pole:1,title:'等待奖励时，它通常……',context:'例如训练间隔或食物准备的短暂等待。',a:'转向别的活动，之后再回来。',b:'保持原来的位置和动作等待完成。'},
+      {axis:0,pole:1,title:'在多人互动的环境里，它会……',context:'例如家人聚会或宠物友好的公共空间。',a:'锁定一位熟悉的人或找安静位置。',b:'在不同的人和互动之间来回参与。'},
+      {axis:1,pole:1,title:'面对益智玩具时，它更常……',context:'观察它解决问题时保留的策略。',a:'重复已经成功的动作。',b:'组合不同动作，尝试新的解法。'},
+      {axis:2,pole:1,title:'同伴感到不舒服时，它会……',context:'留意它对其他动物身体信号的回应。',a:'保持一点距离，给对方空间。',b:'靠近陪伴，观察对方的状态。'},
+      {axis:3,pole:1,title:'一项小任务没有完成时，它会……',context:'例如玩具卡住或嗅闻线索中断。',a:'转去其他活动，过一会儿再回来。',b:'继续调整动作，直到找到收尾方式。'},
+      {axis:0,pole:1,title:'独处一段时间后见到你，它通常……',context:'观察重逢时它主动发起互动的强度。',a:'先在附近观察或继续自己的活动。',b:'马上靠近，发起较多互动。'},
+      {axis:1,pole:1,title:'发现物品被挪到新位置时，它会……',context:'例如水碗、垫子或常用玩具位置改变。',a:'先检查具体物品和周边细节。',b:'先探索整个空间，判断环境变化。'},
+      {axis:2,pole:1,title:'你提出的互动和它当下需求冲突时，它会……',context:'例如它正在休息，而你发起玩耍。',a:'按当下关系线索回应，可能先靠近你。',b:'按自己的当下需要继续休息或完成原活动。'},
+      {axis:3,pole:1,title:'准备出门时发现常走的路受阻，它会……',context:'例如施工、积水或临时封闭。',a:'快速接受替代路线。',b:'在原路线附近确认一会儿再切换。'},
+      {axis:0,pole:1,title:'互动被中途打断后，它通常……',context:'例如家人接电话或活动暂时暂停。',a:'转去自己探索或休息。',b:'过一会儿再次发起同一互动。'},
+      {axis:1,pole:1,title:'熟悉的游戏可以有新玩法时，它会……',context:'观察它在已知活动中的变化倾向。',a:'重复熟悉的顺序和动作。',b:'把物品或步骤换一种组合。'},
+      {axis:2,pole:1,title:'共享休息位置发生小冲突时，它会……',context:'只观察日常空间中的沟通方式，不涉及护食或攻击。',a:'先观察对方状态，再调整距离。',b:'先坚持自己的位置或目标。'},
+      {axis:3,pole:1,title:'一天的活动被提前结束时，它会……',context:'例如玩耍或嗅闻比平时早结束。',a:'接受切换，找新的事情或位置。',b:'尝试把原来的活动完成或重新开始。'},
+      {axis:0,pole:0,title:'家人坐下休息时，它通常……',context:'没有人主动叫它时，观察它的陪伴选择。',a:'走近坐在附近，等待互动机会。',b:'留在自己的位置安静休息。'},
+      {axis:1,pole:0,title:'面对一个结构复杂的新物件时，它会……',context:'例如带盖子的盒子、可拆分的玩具。',a:'先检查边缘、开口和可触碰的部分。',b:'先观察物件与周围空间如何组合。'},
+      {axis:2,pole:0,title:'奖励方式改变时，它更看重……',context:'比较食物奖励和互动反馈对它的影响。',a:'任务是否完成、步骤是否清楚。',b:'你的语气、眼神和互动回应。'},
+      {axis:3,pole:0,title:'出门前的固定流程少了一步时，它会……',context:'例如少了拿牵引绳或穿戴的某一步。',a:'停下来等待熟悉的流程补上。',b:'顺着新的流程继续出门。'},
+      {axis:0,pole:0,title:'来到新的室内空间时，它通常……',context:'例如朋友家、宠物友好的店或民宿。',a:'很快在空间里探索并接触周围。',b:'先围绕熟悉的人观察，之后再探索。'},
+      {axis:1,pole:0,title:'学习一个重复动作时，它会……',context:'例如坐下、等待或固定位置停留。',a:'记住具体的手势、声音和动作顺序。',b:'把规则延伸到相似但不同的情境。'},
+      {axis:2,pole:0,title:'家人之间出现紧张气氛时，它会……',context:'观察它对关系氛围与具体事件的关注。',a:'先看谁的状态需要回应或靠近。',b:'先确认声音、动作或事情发生的位置。'},
+      {axis:3,pole:0,title:'散步途中临时遇到新地点时，它会……',context:'例如新的草地、台阶或可停留区域。',a:'按熟悉路线继续，先保持原节奏。',b:'愿意调整节奏去探索新区域。'},
+      {axis:0,pole:0,title:'有多个玩耍对象时，它通常……',context:'例如两位家人同时邀请互动。',a:'在不同对象之间切换参与。',b:'选择一位或一个物品专注互动。'},
+      {axis:1,pole:0,title:'嗅闻线索中断时，它会……',context:'例如气味被风吹散或被其他气味覆盖。',a:'回到最后确认的具体位置继续寻找。',b:'扩大范围，尝试从整体环境重新判断。'},
+      {axis:2,pole:0,title:'新伙伴第一次靠近时，它会……',context:'在可控、安全的距离内观察互动。',a:'关注对方的姿势、速度和具体动作。',b:'关注彼此的距离和当下氛围，再决定回应。'},
+      {axis:3,pole:0,title:'熟悉的休息位置被占用时，它会……',context:'例如垫子、窝或常用角落临时有人使用。',a:'先等待原位置恢复可用。',b:'很快选择另一个位置休息。'},
+      {axis:0,pole:0,title:'从户外回家后，它更常……',context:'观察外出结束后的精力恢复方式。',a:'还会寻找家人或玩具互动。',b:'自己找位置安静恢复。'},
+      {axis:1,pole:0,title:'打开一个熟悉但换了包装的物品时，它会……',context:'例如新的袋子、盒子或玩具外壳。',a:'先逐一检查气味、形状和触感。',b:'先把它放进原有活动里试试。'},
+      {axis:2,pole:0,title:'它想要的东西暂时无法得到时，会更常……',context:'例如玩具在高处或门暂时关着。',a:'寻找解决路径或尝试新的动作。',b:'转向你寻求回应或陪伴。'},
+      {axis:3,pole:0,title:'临时来了访客时，它会……',context:'观察未提前安排的环境变化。',a:'先回到熟悉位置，等环境稳定。',b:'较快加入新的互动或探索。'},
+      {axis:0,pole:1,title:'在安静的家中，它的注意力更常……',context:'没有明显事件发生时，观察它的主动选择。',a:'停留在自己的气味、物品或空间。',b:'寻找人或动物，发起新的互动。'},
+      {axis:1,pole:1,title:'看到熟悉物品的新用途时，它会……',context:'例如纸箱、毛巾或纸袋出现在新位置。',a:'按过去的用途接近和使用。',b:'尝试把它和当前环境组合出新玩法。'},
+      {axis:2,pole:1,title:'训练中出现错误反馈时，它会……',context:'例如动作没完成或奖励没有及时出现。',a:'观察你的表情和语气，再决定是否继续。',b:'继续调整动作，寻找有效步骤。'},
+      {axis:3,pole:1,title:'玩具轮换时，它会……',context:'把几件玩具按不同日期或顺序交替提供。',a:'接受当天可用的玩具，较快开始。',b:'寻找原来熟悉的玩具或完成原来的选择。'},
+      {axis:0,pole:1,title:'和熟悉的人互动一阵后，它通常……',context:'比较互动之后它恢复精力的方向。',a:'找安静位置休息或自己探索。',b:'继续寻找下一个互动机会。'},
+      {axis:1,pole:1,title:'对还没有发生的动静，它会……',context:'例如听到远处声音后等待后续变化。',a:'等具体声音或物品出现后再回应。',b:'提前走向可能发生变化的方向。'},
+      {axis:2,pole:1,title:'同伴需要空间时，它会……',context:'只观察安全、平静的日常相处。',a:'靠近确认对方状态，保持陪伴。',b:'退开一点，让对方先完成自己的活动。'},
+      {axis:3,pole:1,title:'一个新活动有多个步骤时，它会……',context:'例如新的嗅闻游戏或分段训练。',a:'跟着当下出现的线索自由切换。',b:'按顺序完成每一步，再结束活动。'},
+      {axis:0,pole:1,title:'被邀请加入互动时，它通常……',context:'观察它对他人发起邀请的回应方式。',a:'先看一会儿，确认合适后再加入。',b:'很快加入并把互动继续下去。'},
+      {axis:1,pole:1,title:'到熟悉地点但环境变了时，它会……',context:'例如家具位置、气味或声音发生变化。',a:'逐一检查具体变化。',b:'先重新探索整个空间的关系。'},
+      {axis:2,pole:1,title:'当你需要它暂时等待时，它会……',context:'例如你在处理事情，暂时不能回应它。',a:'转去自己的活动或观察环境。',b:'继续靠近并用互动方式提醒你。'},
+      {axis:3,pole:1,title:'一天中出现临时空档时，它会……',context:'例如原定活动取消或提前结束。',a:'顺势选择新的活动。',b:'等待原本的活动恢复或完成。'}
+    ];
+    const types = {
+      ESTJ:['小队长','认真可靠的日常管理者','它很快摸清生活规律，也喜欢用明确的方式表达自己的期待。熟悉的流程让它安心，自己的小天地也需要被尊重。','给它稳定的作息和清楚一致的提示；改变日常时留一点适应时间。'],
+      ESTP:['探险家','活力满格的现场派','它对正在发生的事反应敏捷，总能找到值得参与的新鲜动静。比起等待，它更享受亲自去闻、去看、去试。','把探索安排进日常：安全的新路线、嗅闻游戏和短而有趣的互动都很适合它。'],
+      ESFJ:['暖心管家','把陪伴放在心上的伙伴','它敏锐地留意熟悉的人，也会把共同生活的小仪式记在心里。有人在身边、有回应的互动，会让它格外踏实。','每天留一段专属陪伴时间，让它知道你的回应稳定而可预期。'],
+      ESFP:['快乐制造机','热爱分享当下的小太阳','它容易被有趣的气味、声音和伙伴吸引，也很乐于把好心情传递出来。生活越有参与感，它通常越自在。','用游戏、互动散步和温和的社交丰富生活，同时给它留出安静休息的时间。'],
+      ENTJ:['目标派','有主见的行动规划师','它会迅速注意到环境的变化，并倾向于自己找到应对办法。清晰、有方向的互动，比漫无目的地等待更能吸引它。','设计循序渐进的小挑战，让它在可预测的边界里获得自主探索的机会。'],
+      ENTP:['点子王','好奇心旺盛的变化玩家','它很会发现新玩法，对重复的事情容易失去兴趣。看起来像是临场发挥，其实常常是在主动寻找更多可能。','定期轮换玩具和益智任务，在丰富变化之外维持稳定的基本生活节奏。'],
+      ENFJ:['读心伙伴','很会回应情绪的陪伴者','它常把注意力放在关系和氛围上，善于从细微线索里感受周围人的状态。亲密互动会让它觉得自己属于这个小群体。','温柔回应它的靠近，也帮它练习独处，让陪伴和休息都成为安心的体验。'],
+      ENFP:['灵感精灵','好奇又热情的探索者','它对新鲜事物和情绪线索都很敏感，兴趣常常来得快、转得也快。让它保持好奇的同时，也需要可回来的熟悉港湾。','准备多种短时活动，结束后用固定的休息习惯帮助它平稳切换。'],
+      ISTJ:['规律守护者','踏实而安心的观察家','它会认真记住环境里的规律和熟悉的细节。看起来慢热，其实是在先确认周围是否安全、可靠。','提前告知环境变化，用一致的提示和固定空间帮助它建立安全感。'],
+      ISTP:['安静工匠','独立专注的实干派','它喜欢先观察、再自己动手理解一件事。独立探索对它很重要，太密集的互动反而会打断它的节奏。','提供可以独立探索的安全空间；邀请互动时给它选择和回应的余地。'],
+      ISFJ:['贴心守候者','温和细腻的陪伴派','它会留意熟悉生活里细小的变化，并用安静的方式维持亲近感。熟悉的节奏和稳定的关系，是它的安心来源。','珍惜它安静陪伴的方式，尽量保持环境平和并照顾好日常节律。'],
+      ISFP:['温柔感受派','按自己的步调生活的伙伴','它对气味、触感和周围氛围有细腻的感受，偏爱不被催促地认识世界。舒服与否，往往比热闹与否更重要。','给它柔和、丰富的感官体验，让它按自己的步调接近新事物。'],
+      INTJ:['观察学者','善于建立小规律的独立派','它会静静观察重复出现的线索，慢慢形成自己的判断。看似不动声色，其实一直在整理这个世界的规则。','通过简洁、一致的互动建立信任，也为它安排需要动脑的独立活动。'],
+      INTP:['思考家','爱琢磨细节的好奇观察者','它会花时间研究有趣的声音、物件和变化，不一定立刻参与，但可能默默记下很多细节。','提供安全的观察和探索机会，不急着打断它专注研究的小片刻。'],
+      INFJ:['敏感共鸣者','细心感受氛围的安静伙伴','它对熟悉之人的状态和环境氛围很敏感。慢慢靠近、安静相伴，往往是它最真诚的表达。','维持平稳温和的相处环境，给它安静靠近或暂时独处的自由。'],
+      INFP:['温柔梦想家','有自己小宇宙的感受派','它按照自己的感受认识世界，对熟悉的人与空间有独特的依恋。给它一点时间，它会用自己的方式表达信任。','尊重它需要的缓冲和独处，用温柔稳定的日常慢慢积累信任。']
+    };
+    const axisLetters = [['E','I'],['S','N'],['T','F'],['J','P']];
+    let current = 0, selected = null, petType = '狗狗', answers = Array(questions.length).fill(null);
+    const qs = document.getElementById('questionArea');
+    const introShell = document.getElementById('introShell');
+    const quizShell = document.getElementById('quizShell');
+    const resultShell = document.getElementById('resultShell');
+    const nextBtn = document.getElementById('nextBtn');
+    const petInput = document.getElementById('petInput');
+    const memeBubble = document.getElementById('memeBubble');
+    const safeName = () => (petInput.value.trim().slice(0, 12) || (petType === '猫咪' ? '小猫' : '小狗'));
+    document.querySelectorAll('.species button').forEach(btn => btn.addEventListener('click', () => {
+      document.querySelectorAll('.species button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active'); petType = btn.dataset.species;
+      const isCat = petType === '猫咪';
+      document.getElementById('petVisual').classList.toggle('cat-mode', isCat);
+      document.getElementById('petVisual').setAttribute('aria-label', isCat ? '动态猫咪插画' : '动态柴犬插画');
+      document.getElementById('petName').textContent = `${safeName()}的观察日记`;
+      document.getElementById('petHint').textContent = isCat ? '它在用自己的节奏探索世界。' : '它在用自己的方式认识世界。';
+      memeBubble.textContent = isCat ? '先让我静静观察一下。' : '今天也要认真闻闻每一件事。';
+    }));
+    petInput.addEventListener('input', () => document.getElementById('petName').textContent = `${safeName()}的观察日记`);
+    document.getElementById('startBtn').addEventListener('click', () => {
+      answers = Array(questions.length).fill(null); current = 0;
+      introShell.style.display = 'none'; resultShell.style.display = 'none'; quizShell.style.display = 'block';
+      document.getElementById('petName').textContent = `${safeName()}正在观察`;
+      renderQuestion();
+    });
+    document.getElementById('backBtn').addEventListener('click', () => {
+      if (current === 0) { quizShell.style.display = 'none'; introShell.style.display = 'block'; document.getElementById('petName').textContent = `${safeName()}的观察日记`; }
+      else { current--; renderQuestion(); }
+    });
+    function renderQuestion() {
+      const q = questions[current]; selected = answers[current];
+      document.getElementById('stepNum').textContent = String(current + 1).padStart(2,'0');
+      document.getElementById('progressBar').style.width = `${((current + 1) / questions.length) * 100}%`;
+      nextBtn.disabled = selected === null;
+      nextBtn.querySelector('span').textContent = current === questions.length - 1 ? '查看结果' : '下一题';
+      qs.innerHTML = `<p class="question-kicker">行为观察 · 日常情境</p><h2 class="question-title">${q.title}</h2><p class="question-context">${q.context}</p><div class="answers"><button class="answer ${selected === 0 ? 'selected' : ''}" data-answer="0"><span class="answer-key">A</span><span class="answer-text">${q.a}</span><span class="answer-check"></span></button><button class="answer ${selected === 1 ? 'selected' : ''}" data-answer="1"><span class="answer-key">B</span><span class="answer-text">${q.b}</span><span class="answer-check"></span></button></div>`;
+      qs.querySelectorAll('.answer').forEach(btn => btn.addEventListener('click', () => {
+        selected = Number(btn.dataset.answer); answers[current] = selected;
+        qs.querySelectorAll('.answer').forEach(a => a.classList.toggle('selected', Number(a.dataset.answer) === selected));
+        nextBtn.disabled = false;
+      }));
+      document.getElementById('petHint').textContent = `正在记录第 ${current + 1} 个小线索。`;
+    }
+    nextBtn.addEventListener('click', () => {
+      if (selected === null) return;
+      answers[current] = selected;
+      if (current < questions.length - 1) { current++; renderQuestion(); }
+      else showResult();
+    });
+    function showResult() {
+      const scores = [0,0,0,0], totals = [0,0,0,0];
+      questions.forEach((q,i) => { totals[q.axis]++; if (answers[i] === (q.pole === 0 ? 1 : 0)) scores[q.axis]++; });
+      const letters = axisLetters.map((pair,axis) => scores[axis] > totals[axis] / 2 ? pair[1] : pair[0]);
+      const code = letters.join('');
+      const info = types[code];
+      const traitLabels = [['主动互动','安静蓄能'],['具体细节','整体联想'],['任务导向','情绪共感'],['偏好规律','乐于变化']];
+      const traits = letters.map((l,i) => {
+        const pct = Math.round((scores[i] / totals[i]) * 100);
+        const dominantIsSecond = l === axisLetters[i][1];
+        const dominantPct = dominantIsSecond ? pct : 100 - pct;
+        const dominant = dominantIsSecond ? `${axisLetters[i][1]} · ${traitLabels[i][1]}` : `${axisLetters[i][0]} · ${traitLabels[i][0]}`;
+        const other = dominantIsSecond ? `${axisLetters[i][0]} · ${traitLabels[i][0]} ${100 - dominantPct}%` : `${axisLetters[i][1]} · ${traitLabels[i][1]} ${100 - dominantPct}%`;
+        return `<div class="trait"><span>${dominant}</span><div class="trait-bar"><i style="width:${Math.max(8,dominantPct)}%;${dominantIsSecond ? 'margin-left:auto;background:var(--blue)' : ''}"></i></div><span class="trait-value">${dominantPct}%</span><span style="grid-column:1;color:#97a199">${other}</span></div>`;
+      }).join('');
+      quizShell.style.display = 'none';
+      resultShell.style.display = 'block';
+      resultShell.innerHTML = `<div class="result-mark">✳ ${safeName()}的觀察結果</div><div class="type-row"><div class="type-code">${code}</div><div class="type-name">${info[0]}</div></div><p class="result-lead">${info[1]}，<br>是${safeName()}認識世界的方式。</p><p class="result-body">${info[2]}</p><div class="trait-title">性格傾向觀察</div><div class="traits">${traits}</div><div class="care-note"><strong>陪伴小建議</strong><p>${info[3]}</p></div><div class="result-actions"><button class="primary" id="restartBtn" type="button"><span>重新观察</span><svg viewBox="0 0 24 24" fill="none"><path d="M20 11a8 8 0 0 0-14-5L4 8m0-5v5h5m-5 5a8 8 0 0 0 14 5l2-2m0 5v-5h-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="secondary" id="shareBtn" type="button">分享结果</button></div><p class="fineprint" style="text-align:left;margin-top:12px">性格类型是观察视角，不是诊断；它无法取代个体经验与专业行为评估。</p>`;
+      document.getElementById('petName').textContent = `${safeName()} · ${info[0]}`;
+      document.getElementById('petHint').textContent = '谢谢你认真观察它。';
+      document.getElementById('restartBtn').addEventListener('click', () => { resultShell.style.display = 'none'; introShell.style.display = 'block'; document.getElementById('petName').textContent = `${safeName()}的观察日记`; });
+      document.getElementById('shareBtn').addEventListener('click', async () => {
+        const text = `${safeName()}的宠物性格观察结果：${code} · ${info[0]}。TAILS 宠物性格观察`;
+        try { if (navigator.share) await navigator.share({title:'TAILS 宠物性格观察', text}); else if (navigator.clipboard) { await navigator.clipboard.writeText(text); showToast('结果摘要已复制'); } else showToast(text); } catch (e) { if (e.name !== 'AbortError') showToast('暂时无法分享，请稍后再试'); }
+      });
+    }
+    function showToast(message) { const el = document.getElementById('toast'); el.textContent = message; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2400); }
+  </script>
+</body>
+</html>
